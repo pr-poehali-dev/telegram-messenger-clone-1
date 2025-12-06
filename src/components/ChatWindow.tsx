@@ -11,6 +11,11 @@ interface Message {
   isVoice?: boolean;
   duration?: string;
   isPlaying?: boolean;
+  isImage?: boolean;
+  imageUrl?: string;
+  isFile?: boolean;
+  fileName?: string;
+  fileSize?: string;
 }
 
 interface ChatWindowProps {
@@ -20,9 +25,10 @@ interface ChatWindowProps {
     avatar: string;
     online: boolean;
   };
+  onVideoCall?: () => void;
 }
 
-const ChatWindow = ({ chat }: ChatWindowProps) => {
+const ChatWindow = ({ chat, onVideoCall }: ChatWindowProps) => {
   const [messages, setMessages] = useState<Message[]>([
     { id: 1, text: 'Привет! Как дела?', time: '10:30', isMine: false },
     { id: 2, text: 'Отлично! Работаю над проектом', time: '10:32', isMine: true },
@@ -33,7 +39,9 @@ const ChatWindow = ({ chat }: ChatWindowProps) => {
 
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -63,6 +71,29 @@ const ChatWindow = ({ chat }: ChatWindowProps) => {
         isMine: true,
       };
       setMessages([...messages, newMessage]);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const isImage = file.type.startsWith('image/');
+      const newMessage: Message = {
+        id: Date.now(),
+        time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+        isMine: true,
+        ...(isImage ? {
+          isImage: true,
+          imageUrl: URL.createObjectURL(file)
+        } : {
+          isFile: true,
+          fileName: file.name,
+          fileSize: (file.size / 1024).toFixed(1) + ' KB'
+        })
+      };
+      setMessages([...messages, newMessage]);
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -97,6 +128,7 @@ const ChatWindow = ({ chat }: ChatWindowProps) => {
               <Icon name="Phone" size={20} className="text-purple-600" />
             </Button>
             <Button
+              onClick={onVideoCall}
               variant="ghost"
               size="icon"
               className="hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 transition-all"
@@ -148,6 +180,47 @@ const ChatWindow = ({ chat }: ChatWindowProps) => {
                   {message.duration}
                 </span>
               </div>
+            ) : message.isImage ? (
+              <div
+                className={`rounded-2xl overflow-hidden max-w-sm ${
+                  message.isMine ? 'rounded-br-md' : 'rounded-bl-md'
+                }`}
+              >
+                <img
+                  src={message.imageUrl}
+                  alt="Изображение"
+                  className="w-full h-auto shadow-lg"
+                />
+                <div className={`px-3 py-2 text-xs ${
+                  message.isMine
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white/80'
+                    : 'bg-white text-gray-500'
+                }`}>
+                  {message.time}
+                </div>
+              </div>
+            ) : message.isFile ? (
+              <div
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl max-w-xs ${
+                  message.isMine
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                    : 'bg-white shadow-md'
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  message.isMine ? 'bg-white/20' : 'bg-purple-100'
+                }`}>
+                  <Icon name="File" size={20} className={message.isMine ? 'text-white' : 'text-purple-600'} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium truncate ${message.isMine ? 'text-white' : 'text-gray-900'}`}>
+                    {message.fileName}
+                  </p>
+                  <p className={`text-xs ${message.isMine ? 'text-white/70' : 'text-gray-500'}`}>
+                    {message.fileSize}
+                  </p>
+                </div>
+              </div>
             ) : (
               <div
                 className={`px-4 py-2 rounded-2xl max-w-md ${
@@ -168,11 +241,23 @@ const ChatWindow = ({ chat }: ChatWindowProps) => {
       </div>
 
       <div className="p-4 bg-white border-t border-gray-200">
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          onChange={handleFileSelect}
+          accept="image/*,application/pdf,.doc,.docx,.zip"
+        />
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" className="text-gray-500 hover:text-purple-600">
             <Icon name="Smile" size={22} />
           </Button>
-          <Button variant="ghost" size="icon" className="text-gray-500 hover:text-purple-600">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-gray-500 hover:text-purple-600"
+            onClick={() => fileInputRef.current?.click()}
+          >
             <Icon name="Paperclip" size={22} />
           </Button>
 

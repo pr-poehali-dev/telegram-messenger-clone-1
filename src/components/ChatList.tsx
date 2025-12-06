@@ -17,9 +17,11 @@ interface Chat {
 interface ChatListProps {
   onSelectChat: (chat: Chat) => void;
   selectedChatId?: number;
+  onCreateGroup?: () => void;
+  onOpenProfile?: () => void;
 }
 
-const ChatList = ({ onSelectChat, selectedChatId }: ChatListProps) => {
+const ChatList = ({ onSelectChat, selectedChatId, onCreateGroup, onOpenProfile }: ChatListProps) => {
   const [chats] = useState<Chat[]>([
     {
       id: 1,
@@ -73,10 +75,19 @@ const ChatList = ({ onSelectChat, selectedChatId }: ChatListProps) => {
     <div className="h-full flex flex-col bg-white border-r border-gray-200">
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-4">
+          <button 
+            onClick={onOpenProfile}
+            className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-xl hover:scale-105 transition-transform"
+          >
+            👨‍💼
+          </button>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             Чаты
           </h1>
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+          <button 
+            onClick={onCreateGroup}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
             <Icon name="Edit" size={20} className="text-gray-600" />
           </button>
         </div>
