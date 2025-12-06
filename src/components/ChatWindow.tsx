@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import EmojiSelector from '@/components/EmojiSelector';
 
 interface Message {
   id: number;
@@ -16,6 +17,7 @@ interface Message {
   isFile?: boolean;
   fileName?: string;
   fileSize?: string;
+  reaction?: string;
 }
 
 interface ChatWindowProps {
@@ -40,6 +42,8 @@ const ChatWindow = ({ chat, onVideoCall }: ChatWindowProps) => {
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -97,9 +101,20 @@ const ChatWindow = ({ chat, onVideoCall }: ChatWindowProps) => {
     }
   };
 
+  const handleEmojiSelect = (emoji: string) => {
+    setInputText(inputText + emoji);
+    setShowEmojiPicker(false);
+  };
+
+  const handleReaction = (messageId: number, reaction: string) => {
+    setMessages(messages.map(msg => 
+      msg.id === messageId ? { ...msg, reaction } : msg
+    ));
+  };
+
   return (
-    <div className="h-full flex flex-col bg-gradient-to-b from-gray-50 to-white">
-      <div className="p-4 bg-white border-b border-gray-200 shadow-sm">
+    <div className={`h-full flex flex-col transition-colors ${isDarkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'}`}>
+      <div className={`p-4 border-b shadow-sm ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -114,12 +129,20 @@ const ChatWindow = ({ chat, onVideoCall }: ChatWindowProps) => {
               )}
             </div>
             <div>
-              <h2 className="font-semibold text-gray-900">{chat.name}</h2>
-              <p className="text-xs text-gray-500">{chat.online ? 'В сети' : 'Был(а) недавно'}</p>
+              <h2 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{chat.name}</h2>
+              <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{chat.online ? 'В сети' : 'Был(а) недавно'}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              variant="ghost"
+              size="icon"
+              className="hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 transition-all"
+            >
+              <Icon name={isDarkMode ? 'Sun' : 'Moon'} size={20} className="text-purple-600" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -136,7 +159,7 @@ const ChatWindow = ({ chat, onVideoCall }: ChatWindowProps) => {
               <Icon name="Video" size={20} className="text-purple-600" />
             </Button>
             <Button variant="ghost" size="icon">
-              <Icon name="MoreVertical" size={20} className="text-gray-600" />
+              <Icon name="MoreVertical" size={20} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
             </Button>
           </div>
         </div>
@@ -222,17 +245,37 @@ const ChatWindow = ({ chat, onVideoCall }: ChatWindowProps) => {
                 </div>
               </div>
             ) : (
-              <div
-                className={`px-4 py-2 rounded-2xl max-w-md ${
-                  message.isMine
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-br-md'
-                    : 'bg-white shadow-md text-gray-900 rounded-bl-md'
-                }`}
-              >
-                <p className="text-sm leading-relaxed">{message.text}</p>
-                <p className={`text-xs mt-1 ${message.isMine ? 'text-white/80' : 'text-gray-500'}`}>
-                  {message.time}
-                </p>
+              <div className="relative group">
+                <div
+                  className={`px-4 py-2 rounded-2xl max-w-md ${
+                    message.isMine
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-br-md'
+                      : isDarkMode 
+                        ? 'bg-gray-700 text-white rounded-bl-md'
+                        : 'bg-white shadow-md text-gray-900 rounded-bl-md'
+                  }`}
+                >
+                  <p className="text-sm leading-relaxed">{message.text}</p>
+                  <p className={`text-xs mt-1 ${message.isMine ? 'text-white/80' : isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {message.time}
+                  </p>
+                </div>
+                {message.reaction && (
+                  <div className="absolute -bottom-2 right-2 bg-white rounded-full px-2 py-1 shadow-lg text-sm border border-gray-200">
+                    {message.reaction}
+                  </div>
+                )}
+                <div className={`absolute ${message.isMine ? '-left-24' : '-right-24'} top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-white rounded-full p-1 shadow-lg`}>
+                  {['❤️', '👍', '😂', '😮', '😢', '🔥'].map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => handleReaction(message.id, emoji)}
+                      className="w-8 h-8 hover:scale-125 transition-transform text-lg"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -240,7 +283,7 @@ const ChatWindow = ({ chat, onVideoCall }: ChatWindowProps) => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 bg-white border-t border-gray-200">
+      <div className={`p-4 border-t ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
         <input
           ref={fileInputRef}
           type="file"
@@ -249,13 +292,21 @@ const ChatWindow = ({ chat, onVideoCall }: ChatWindowProps) => {
           accept="image/*,application/pdf,.doc,.docx,.zip"
         />
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="text-gray-500 hover:text-purple-600">
-            <Icon name="Smile" size={22} />
-          </Button>
+          <div className="relative">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={`${isDarkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-500 hover:text-purple-600'}`}
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            >
+              <Icon name="Smile" size={22} />
+            </Button>
+            {showEmojiPicker && <EmojiSelector onSelect={handleEmojiSelect} />}
+          </div>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="text-gray-500 hover:text-purple-600"
+            className={`${isDarkMode ? 'text-gray-400 hover:text-purple-400' : 'text-gray-500 hover:text-purple-600'}`}
             onClick={() => fileInputRef.current?.click()}
           >
             <Icon name="Paperclip" size={22} />
@@ -268,7 +319,9 @@ const ChatWindow = ({ chat, onVideoCall }: ChatWindowProps) => {
               onChange={(e) => setInputText(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Введите сообщение..."
-              className="w-full px-4 py-3 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all"
+              className={`w-full px-4 py-3 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all ${
+                isDarkMode ? 'bg-gray-800 text-white placeholder-gray-500' : 'bg-gray-100 text-gray-900'
+              }`}
             />
           </div>
 
